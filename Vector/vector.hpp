@@ -3,10 +3,13 @@
 #include <iterator>
 
 namespace my {
+
+	int calledDestructorForN = 0;
+
 	template <typename T>
 	class vector {
 	public:
-		vector() : _capacity(0), _size(0) {};
+		vector() : _capacity(0), _size(0), array(NULL) {};
 		vector(vector<T>& src);
 		vector(int i);
 		~vector();
@@ -28,6 +31,7 @@ namespace my {
 		};
 
 		T& operator[](int i);
+		const T& operator[](int i) const;
 		bool operator==(vector<T>& rhs);
 		bool operator!=(vector<T>& rhs);
 		vector<T> operator=(vector<T>& rhs);
@@ -75,7 +79,7 @@ namespace my {
 	template<typename T>
 	inline vector<T> :: ~vector() 
 	{
-		delete array;
+		delete[] array;
 	}
 
 	template<typename T>
@@ -117,6 +121,12 @@ namespace my {
 
 	template<typename T>
 	inline T& vector<T> :: operator[](int i)
+	{
+		return array[i];
+	}
+
+	template<typename T>
+	inline const T& vector<T> :: operator[](int i) const
 	{
 		return array[i];
 	}

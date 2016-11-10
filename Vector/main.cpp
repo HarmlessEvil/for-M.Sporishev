@@ -11,6 +11,7 @@ TEST_CASE("block1") {
 	class testClass1 {
 	public:
 		testClass1() : IsCreatedByDefaultConstructor(true) {};
+		~testClass1() { my :: calledDestructorForN++; };
 
 		bool IsCreatedByDefaultConstructor;
 	};
@@ -55,6 +56,11 @@ TEST_CASE("block1") {
 
 		REQUIRE(trueForAll);
 	}
+
+	SECTION("Dectructor when vector is destroyed") {
+		REQUIRE(my :: calledDestructorForN == 10);
+	}
+
 	SECTION("[] overload") {
 		my :: vector<testClass1> checkOnClass1(1);
 		REQUIRE(checkOnClass1[0].IsCreatedByDefaultConstructor); 
