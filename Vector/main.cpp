@@ -6,6 +6,9 @@
 #include "include\catch.h"
 
 #include "vector.hpp"
+#include "Allocator.hpp"
+
+//TODO:Benchmark, покрытие аллокатора тестами
 
 TEST_CASE("block1") {
 	class testClass1 {
@@ -15,6 +18,17 @@ TEST_CASE("block1") {
 
 		bool IsCreatedByDefaultConstructor;
 	};
+
+	my :: Allocator<long> a;
+	long* b = a.allocate(15);
+	a.construct(b);
+	a.destroy(b);
+	a.deallocate(b, 15);
+	b = a.allocate(5000);
+	a.construct(b);
+	a.destroy(b);
+	a.deallocate(b, 5000);
+
 
 	my :: vector<int> buff;
 	my :: vector<int> buff1(10);

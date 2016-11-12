@@ -1,9 +1,10 @@
 #pragma once
 
 #include <iterator>
+#include "Allocator.hpp"
 
 namespace my {
-
+	//TODO: Использоавть свой аллокатор
 	int calledDestructorForN = 0;
 
 	template <typename T>
@@ -49,6 +50,7 @@ namespace my {
 		unsigned size();
 	private:
 		T* array;
+		T* array1;
 		unsigned _capacity;
 		unsigned _size;
 	};
@@ -305,5 +307,4 @@ namespace my {
 	{
 		return data != 0;
 	}
-
 }
