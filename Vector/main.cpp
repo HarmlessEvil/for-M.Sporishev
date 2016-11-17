@@ -2,14 +2,15 @@
 #define _SCL_SECURE_NO_WARNINGS
 
 #include <iostream>
+#include <time.h>
 #include <vector>
 #include "include\catch.h"
 
 #include "vector.hpp"
 #include "Allocator.hpp"
+#include "include\tlsf.h"
 
-//TODO:Benchmark, покрытие аллокатора тестами
-
+#ifndef BENCHMARK
 TEST_CASE("block1") {
 	class testClass1 {
 	public:
@@ -19,16 +20,10 @@ TEST_CASE("block1") {
 		bool IsCreatedByDefaultConstructor;
 	};
 
-	my :: Allocator<long> a;
-	long* b = a.allocate(15);
-	a.construct(b);
-	a.destroy(b);
-	a.deallocate(b, 15);
-	b = a.allocate(5000);
-	a.construct(b);
-	a.destroy(b);
-	a.deallocate(b, 5000);
-
+	class testClass2 {
+	public:
+		testClass2(int) {};
+	};
 
 	my :: vector<int> buff;
 	my :: vector<int> buff1(10);
@@ -36,6 +31,17 @@ TEST_CASE("block1") {
 	SECTION("Default constructor") {
 		REQUIRE(buff.size() == 0);
 		REQUIRE(buff.capacity() == 0);
+	}
+
+	SECTION(".at()") {
+		REQUIRE_THROWS(int b = buff.at(10));
+		buff1[0] = 15;
+
+		REQUIRE(buff1.at(0) == 15);
+	}
+
+	SECTION("Default constructor isn't necessary anymore!") {
+		my :: vector<testClass2> a(5, 2);
 	}
 
 	SECTION(".reserve()") {
@@ -195,3 +201,166 @@ TEST_CASE("block1") {
 		REQUIRE(vec == clone);
 	}
 }
+
+template <typename T>
+class allocatorStub {
+public:
+	allocatorStub() { created = true; };
+	
+	void destroy(void* p) {};
+	void deallocate(void* p, int n) {};
+
+	bool created;
+	T data;
+};
+
+TEST_CASE("Allocator supprot") {
+
+	class testClass1 {
+	public:
+		testClass1() : IsCreatedByDefaultConstructor(true) {};
+		~testClass1() { my::calledDestructorForN++; };
+
+		bool IsCreatedByDefaultConstructor;
+	};
+
+	SECTION("Appears in default constructor of vector") {
+		my::vector<int, allocatorStub<int>> def;
+
+		REQUIRE(def.getAllocator()->created);
+	}
+
+	SECTION("Supports copying constructor") {
+		my :: vector<int> orig(3);
+		for (int i = 0; i < 3; i++) {
+			orig[i] = i;
+		}
+		my :: vector<int> copied(orig);
+
+		REQUIRE(orig == copied);
+	}
+
+	SECTION("Initializes if amount of elements has been set") {
+		my :: vector<testClass1> checkerInitialize(5);
+
+		bool trueForAll(true);
+
+		for (int i = 0; trueForAll && i < 10; i++) {
+			trueForAll = checkerInitialize[i].IsCreatedByDefaultConstructor;
+		}
+
+		REQUIRE(trueForAll);
+	}
+
+	SECTION("Iterators can travese through") {
+		my :: vector<int> bridge(15);
+
+		int i = 1;
+		for (auto it = bridge.begin(); it != bridge.end(); it++, i++) {
+			(*it) = i * 2;
+		}
+		REQUIRE(bridge[10] == 22);
+		REQUIRE(bridge[14] == 30);
+
+		i = 1;
+		for (auto it = bridge.end(); it != bridge.begin(); it--, i++) {
+			(*it) = i * 2;
+		}
+		REQUIRE(bridge[10] == 12);
+		REQUIRE(bridge[0] == 2);
+	}
+
+	SECTION("Vectors equality doesn't depend on it's allocation") {
+		my :: vector<int> lhs(50);
+		my :: vector<int> rhs(50);
+
+		int i = 0;
+		for (auto it = lhs.begin(); it != lhs.end(); it++, i++) {
+			(*it) = i;
+			rhs[i] = i;
+		}
+
+		REQUIRE(lhs == rhs);
+
+		lhs[12] = -1;
+		REQUIRE(lhs != rhs);
+	}
+
+	SECTION("vector1 = vector2 =/> common adress") {
+		my :: vector<char> name(5);
+		name[0] = 'S';
+		name[1] = 'a';
+		name[2] = 's';
+		name[3] = 'h';
+		name[4] = 'a';
+
+		my :: vector<char> copy = name;
+
+		REQUIRE(name == copy);
+		
+		name.clear();
+		REQUIRE(copy[1] == copy[4]);
+	}
+
+	SECTION("vector recognises his borders") {
+		my :: vector<int> loong(1);
+		loong[0] = 5;
+
+		REQUIRE(loong.back() == loong.front());
+
+		loong.push_back(7);
+		REQUIRE(loong.back() != loong.front());
+	}
+
+	SECTION("Can not give memory more than CHUNK_SIZE") {
+		REQUIRE_THROWS(my::vector<int> tooLong(500));
+	}
+}
+#else
+
+TEST_CASE("Benchmark") {
+	time_t begin = time(NULL);
+	for (int i = 0; i < 300; i++) {
+	my :: Allocator<int> all = my :: Allocator<int>();
+	std :: vector<int*> allPool;
+	
+		for (int i = 0; i < 300; i++) {
+			allPool.push_back(all.allocate(300));
+		}
+		for (int i = 0; i < 200; i++) {
+			int* p = allPool.back();
+			allPool.pop_back();
+			all.deallocate(p, 300);
+		}
+	}
+	time_t end = time(NULL);
+	std :: cout << std :: endl << "My allocator. Elapsed time: " << end - begin << std :: endl;
+
+	#define PUL_SIZE 1000 * 1000
+	
+	// Pool size is in bytes.
+	char pool[PUL_SIZE];
+
+	int *ptr[300];
+	int i, free_mem;
+
+	begin = time(NULL);
+	for (int j = 0; j < 300; j++) {
+		free_mem = init_memory_pool(PUL_SIZE, pool);
+		//printf("Total free memory= %d\n", free_mem);
+		for (i = 0; i < 300; i++)
+			if (!(ptr[i] = (int *)malloc_ex(300, pool))) {
+				printf("Error\n");
+				exit(-1);
+			}
+		for (i = 0; i < 200; i++)
+			free_ex(ptr[i], pool);
+
+		destroy_memory_pool(pool);
+	}
+	end = time(NULL);
+	std :: cout << std :: endl << "TLSF allocator. Elapsed time: " << end - begin << std :: endl;
+	printf("Test OK\n");
+	system("pause");
+}
+#endif
