@@ -1,7 +1,14 @@
 #pragma once
 
+#define BENCHMARK
+
+#ifndef BENCHMARK
 #define POOL_SIZE 255
-#define CHUNK_SIZE 10000
+#define CHUNK_SIZE 255
+#else
+#define POOL_SIZE 1000
+#define CHUNK_SIZE 1000
+#endif
 
 namespace my {
 
@@ -17,6 +24,7 @@ namespace my {
 		typedef T		  value_type;
 
 		Allocator();
+		~Allocator();
 
 		pointer allocate(size_type countObjects, const void* hint = 0);
 		void deallocate(pointer p, size_type countObjects);
@@ -58,8 +66,14 @@ namespace my {
 	inline Allocator<T> :: Allocator() : lastAllocChunk(0), lastDeallocChunk(0)
 	{
 		for (int i = 0; i < POOL_SIZE; pool[i++].Init(sizeof(T), CHUNK_SIZE));
+	}
 
-		T* a = static_cast<T*>(pool[0].Allocate(150));
+	template<typename T>
+	inline Allocator<T> :: ~Allocator()
+	{
+		for (int i = 0; i < POOL_SIZE; i++) {
+			delete[] pool[i].controls;
+		}
 	}
 
 	template<typename T>
@@ -89,6 +103,9 @@ namespace my {
 	template<typename T>
 	inline void Allocator<T> :: deallocate(pointer p, size_type countObjects)
 	{
+		if (!p) {
+			return;
+		}
 		if (!pool[lastDeallocChunk].isHaving(p)) {
 
 			int i, j;
@@ -111,7 +128,7 @@ namespace my {
 		else {
 			int j;
 			for (j = 0; j < CHUNK_SIZE && (void*)pool[lastAllocChunk].controls[j].data != (void*)p;) {
-				j += pool[lastDeallocChunk].controls[j].available ? 1 : pool[lastAllocChunk].controls[j].size;
+				j += pool[lastDeallocChunk].controls[j].available ? 1 : pool[lastDeallocChunk].controls[j].size;
 			}
 
 			pool[lastDeallocChunk].controls[j].available = true;
@@ -130,6 +147,9 @@ namespace my {
 	template<class U, class ...Args>
 	inline void Allocator<T> :: construct(U* p, Args&& ...args)
 	{
+		if (!p) {
+			return;
+		}
 		if (!pool[lastAllocChunk].isHaving(p)) {
 		
 			int i, j;
@@ -158,6 +178,9 @@ namespace my {
 	template<class U>
 	inline void Allocator<T> :: destroy(U* p)
 	{
+		if (!p) {
+			return;
+		}
 		if (!pool[lastAllocChunk].isHaving(p)) {
 
 			int i, j;
