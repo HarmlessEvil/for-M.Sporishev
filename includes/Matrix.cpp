@@ -8,12 +8,12 @@
 #include <ctime>
 #include <thread>
 
-unsigned Matrix :: threads = 1;
+unsigned Matrix::threads = 1;
 
-Matrix :: Matrix (unsigned  n, unsigned m, std :: string argv) {
+Matrix::Matrix(unsigned  n, unsigned m, std::string argv) {
 
 	m = m == 0 ? n : m;
-	tab = std :: vector<std :: vector<double>>(n, std :: vector<double>(m, 0));
+	tab = std::vector<std::vector<double>>(n, std::vector<double>(m, 0));
 
 	if (!argv.compare("generate")) {
 		srand((unsigned int)time(NULL));
@@ -26,12 +26,26 @@ Matrix :: Matrix (unsigned  n, unsigned m, std :: string argv) {
 	}
 }
 
-std :: vector<double> vecMatMul(std :: vector<double>& lhs, Matrix& rhs) {
+Matrix nothread(Matrix& lhs, Matrix& rhs) {
+	Matrix result(lhs.rows(), rhs.cols());
+
+	for (unsigned i = 0; i < lhs.rows(); i++) {
+		for (unsigned j = 0; j < rhs.cols(); j++) {
+			for (unsigned k = 0; k < lhs.cols(); k++) {
+				result[i][j] += lhs[i][k] * rhs[k][j];
+			}
+		}
+	}
+
+	return result;
+}
+
+std::vector<double> vecMatMul(std::vector<double>& lhs, Matrix& rhs) {
 
 	unsigned Rcols = rhs.cols();
 	unsigned cols = lhs.size();
 
-	std :: vector<double>result(Rcols, 0);
+	std::vector<double>result(Rcols, 0);
 
 	for (unsigned i = 0; i < Rcols; i++) {
 		for (unsigned j = 0; j < cols; j++) {
@@ -58,23 +72,23 @@ Matrix Matrix :: operator*(Matrix& x)
 	}
 
 	Matrix result = Matrix(rows(), x.cols());
-	std :: vector<std :: thread> threadPool;
+	std::vector<std::thread> threadPool;
 
 	if (row > threads) {
 		if (row % threads) {
 			for (unsigned i = 0; i < row; i += row / threads + 1) {
-				threadPool.push_back(std :: thread(inThreadHandler, i, (i + row / threads) >= row ? row - 1 : i + row / threads, *this, x, std :: ref(result)));
+				threadPool.push_back(std::thread(inThreadHandler, i, (i + row / threads) >= row ? row - 1 : i + row / threads, *this, x, std::ref(result)));
 			}
 		}
 		else {
 			for (unsigned i = 0; i < row; i += row / threads) {
-				threadPool.push_back(std :: thread(inThreadHandler, i, i + row / threads - 1, *this, x, std :: ref(result)));
+				threadPool.push_back(std::thread(inThreadHandler, i, i + row / threads - 1, *this, x, std::ref(result)));
 			}
 		}
 	}
 	else {
 		for (unsigned i = 0; i < row; i++) {
-			threadPool.push_back(std :: thread(inThreadHandler, i, i, *this, x, std :: ref(result)));
+			threadPool.push_back(std::thread(inThreadHandler, i, i, *this, x, std::ref(result)));
 		}
 	}
 
@@ -87,10 +101,10 @@ Matrix Matrix :: operator*(Matrix& x)
 	return result;
 }
 
-std :: vector<double> Matrix :: operator*(std :: vector<double>& x)
+std::vector<double> Matrix :: operator*(std::vector<double>& x)
 {
 	unsigned s = cols();
-	std :: vector<double> result(s + 1, 0);
+	std::vector<double> result(s + 1, 0);
 
 	for (unsigned i = 0; i <= s; i++) {
 		for (unsigned j = 0; j <= s; j++) {
@@ -116,9 +130,9 @@ Matrix Matrix :: operator*(double x)
 	return result;
 }
 
-std :: vector<double> Matrix :: quadratize()
+std::vector<double> Matrix::quadratize()
 {
-	std :: vector<double> result;
+	std::vector<double> result;
 	unsigned int s = cols();
 	if (tab.size() != tab[0].size()) {
 		for (unsigned int i = 0; i < s; i++) {
@@ -130,12 +144,12 @@ std :: vector<double> Matrix :: quadratize()
 	return result;
 }
 
-Matrix Matrix :: transpose()
+Matrix Matrix::transpose()
 {
 	unsigned int s = cols();
 	Matrix result = Matrix(s + 1);
 	result.quadratize();
-	
+
 	for (unsigned int i = 0; i < s; i++) {
 		for (unsigned int j = 0; j < s; j++) {
 			result[j][i] = tab[i][j];
@@ -145,30 +159,30 @@ Matrix Matrix :: transpose()
 	return result;
 }
 
-unsigned int Matrix :: cols() {
-    return tab[0].size();
+unsigned int Matrix::cols() {
+	return tab[0].size();
 }
 
-unsigned int Matrix :: rows()
+unsigned int Matrix::rows()
 {
 	return tab.size();
 }
 
 Matrix :: ~Matrix() {
-    for (unsigned i = 0; i < cols() + 1; i++) {
-        tab[i].clear();
-    }
-    tab.clear();
+	for (unsigned i = 0; i < cols() + 1; i++) {
+		tab[i].clear();
+	}
+	tab.clear();
 }
 
-std :: vector<double>& Matrix :: operator[](int i) {
-    return tab[i];
+std::vector<double>& Matrix :: operator[](int i) {
+	return tab[i];
 }
 
-std :: vector<double> Matrix :: operator()(unsigned j)
+std::vector<double> Matrix :: operator()(unsigned j)
 {
 	unsigned s = cols();
-	std :: vector<double> result(s + 1, 0);
+	std::vector<double> result(s + 1, 0);
 
 	for (unsigned i = 0; i <= s; i++) {
 		result[i] = tab[i][j];
@@ -177,33 +191,34 @@ std :: vector<double> Matrix :: operator()(unsigned j)
 	return result;
 }
 
-std :: istream& operator>> (std :: istream& is, Matrix& x) {
-    unsigned int s = x.cols();
+std::istream& operator>> (std::istream& is, Matrix& x) {
+	unsigned int s = x.cols();
 
-    for (unsigned int i = 0; i < s; i++) {
-        for (unsigned int j = 0; j < s + 1; j++) {
-            if (j == s) {
-                std :: cout << "Enter the free member of the string " << i << " ";
-            } else {
-                std :: cout << "Enter element (" << i << ',' << j << ") ";
-            }
-            is >> x[i][j];
-        }
-    }
-    return is;
+	for (unsigned int i = 0; i < s; i++) {
+		for (unsigned int j = 0; j < s + 1; j++) {
+			if (j == s) {
+				std::cout << "Enter the free member of the string " << i << " ";
+			}
+			else {
+				std::cout << "Enter element (" << i << ',' << j << ") ";
+			}
+			is >> x[i][j];
+		}
+	}
+	return is;
 }
 
-std :: ostream& operator<< (std :: ostream& os, Matrix& x) {
-    unsigned int s = x.cols();
+std::ostream& operator<< (std::ostream& os, Matrix& x) {
+	unsigned int s = x.cols();
 
-    for (unsigned int i = 0; i < s; i++) {
-        for (unsigned int j = 0; j < s + 1; j++) { os << x[i][j] << ' '; }
-        os << std :: endl;
-    }
-    return os;
+	for (unsigned int i = 0; i < s; i++) {
+		for (unsigned int j = 0; j < s + 1; j++) { os << x[i][j] << ' '; }
+		os << std::endl;
+	}
+	return os;
 }
 
-std :: ifstream& operator>>(std :: ifstream& is, Matrix& x)
+std::ifstream& operator>>(std::ifstream& is, Matrix& x)
 {
 	unsigned int c = x.cols();
 	unsigned int r = x.rows();
@@ -216,24 +231,25 @@ std :: ifstream& operator>>(std :: ifstream& is, Matrix& x)
 	return is;
 }
 
-std :: vector<double> solve(Matrix a) {
-    int cols = (int)a.cols();
+std::vector<double> solve(Matrix a) {
+	int cols = (int)a.cols();
 
-    for (int i = 0; i < cols; i++) {
-        for (int j = i; j < cols; j++) {
-            if ((a[j][i] == 0) || (a[j][i] == 1))
-                continue;
-            if (i == j) {
-                for (int k = cols; k >= i; k--) {
-                    a[j][k] /= a[j][i];
-                }
-            } else {
+	for (int i = 0; i < cols; i++) {
+		for (int j = i; j < cols; j++) {
+			if ((a[j][i] == 0) || (a[j][i] == 1))
+				continue;
+			if (i == j) {
 				for (int k = cols; k >= i; k--) {
-                    a[j][k] = a[j][k] / a[j][i] - a[i][k];
-                }
-            }
-        }
-    }
+					a[j][k] /= a[j][i];
+				}
+			}
+			else {
+				for (int k = cols; k >= i; k--) {
+					a[j][k] = a[j][k] / a[j][i] - a[i][k];
+				}
+			}
+		}
+	}
 
 	for (int i = cols - 1; i > 0; i--) {
 		for (int j = i - 1; j >= 0; j--) {
@@ -249,9 +265,9 @@ std :: vector<double> solve(Matrix a) {
 	return res;
 }
 
-std :: vector<double> vsMul(std :: vector<double>& lhs, double rhs)
+std::vector<double> vsMul(std::vector<double>& lhs, double rhs)
 {
-	std :: vector<double> result(lhs);
+	std::vector<double> result(lhs);
 
 	for (unsigned i = 0; i < lhs.size(); i++) {
 		result[i] *= rhs;
@@ -260,7 +276,7 @@ std :: vector<double> vsMul(std :: vector<double>& lhs, double rhs)
 	return result;
 }
 
-double scalarMul(std :: vector<double>& lhs, std :: vector<double>& rhs)
+double scalarMul(std::vector<double>& lhs, std::vector<double>& rhs)
 {
 	double result = 0;
 
